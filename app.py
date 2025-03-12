@@ -27,7 +27,6 @@ def remove_watermark(image_path):
 
 
 # 将PDF转换为图片，并保存到指定目录
-
 def pdf_to_images(pdf_path, output_folder):
     images = []
     doc = fitz.open(pdf_path)
@@ -35,7 +34,7 @@ def pdf_to_images(pdf_path, output_folder):
     for page_num in range(doc.page_count):
         page = doc[page_num]
         # 设置分辨率为300 DPI
-        pix = page.get_pixmap(matrix=fitz.Matrix(300 / 72, 300 / 72))
+        pix = page.get_pixmap(matrix=fitz.Matrix(dpi, dpi))
         image_path = os.path.join(output_folder, f"page_{page_num + 1}.png")
         pix.save(image_path)
         images.append(image_path)
@@ -62,11 +61,11 @@ def images_to_pdf(image_paths, output_path):
             ratio = min(A4_SIZE_PX_72DPI[0] / width, A4_SIZE_PX_72DPI[1] / height)
 
             # 缩放图像以适应A4纸张，并保持长宽比
-            img_resized = img.resize((int(width * ratio), int(height * ratio)))
+            img_resized = img.resize((int(width * ratio), int(height * ratio)), Image.LANCZOS)
 
             # 创建临时文件并写入图片数据
             with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
-                img_resized.save(temp_file.name, format='PNG')
+                img_resized.save(temp_file.name, format='PNG', quality=95)
 
             # 添加一页
             pdf_writer.add_page()
@@ -74,14 +73,10 @@ def images_to_pdf(image_paths, output_path):
             # 使用临时文件路径添加图像到PDF
             pdf_writer.image(temp_file.name, x=0, y=0, w=A4_SIZE_PX_72DPI[0], h=A4_SIZE_PX_72DPI[1])
 
-    # 清理临时文件
-    for image_path in image_paths:
-        _, temp_filename = os.path.split(image_path)
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+            # 删除临时文件
+            os.remove(temp_file.name)
 
     pdf_writer.output(output_path)
-
 
 
 @app.route('/')
